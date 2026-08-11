@@ -8,7 +8,7 @@
 <style>
 body{
   margin:0;
-  font-family:Arial;
+  font-family:Arial,sans-serif;
   background:#f3f4f6;
   color:#111827;
 }
@@ -99,7 +99,6 @@ button:disabled{
 </header>
 
 <div class="container">
-
 <div class="card">
 
 <h2>Pembayaran Pesanan</h2>
@@ -113,6 +112,11 @@ Memuat pesanan...
 <div class="row">
 <div class="label">Nomor Order</div>
 <div class="value" id="orderId"></div>
+</div>
+
+<div class="row">
+<div class="label">Nama</div>
+<div class="value" id="customer"></div>
 </div>
 
 <div class="row">
@@ -132,18 +136,15 @@ Memuat pesanan...
 
 <div class="row">
 <div class="label">DANA Tujuan</div>
-<div class="value dana">
-089674161923
-</div>
+<div class="value dana">089674161923</div>
 </div>
 
 <p>
 Transfer sesuai total pembayaran ke nomor DANA di atas.
-Setelah selesai, tekan tombol di bawah.
+Setelah selesai, tekan tombol berikut.
 </p>
 
-<button id="confirmButton"
-onclick="konfirmasi()">
+<button id="confirmButton" onclick="konfirmasi()">
 Saya Sudah Transfer
 </button>
 
@@ -178,33 +179,24 @@ async function loadOrder(){
 
 if(!orderId){
 
-document.getElementById("loading")
-.style.display="none";
-
-document.getElementById("error")
-.textContent =
-"Nomor order belum diberikan.";
-
+showError("Nomor order belum diberikan.");
 return;
+
 }
 
 try{
 
 const response = await fetch(
-
 SUPABASE_URL +
 "/rest/v1/orders?id=eq." +
 encodeURIComponent(orderId) +
 "&select=*",
-
 {
 headers:{
 "apikey":SUPABASE_KEY,
-"Authorization":
-"Bearer " + SUPABASE_KEY
+"Authorization":"Bearer " + SUPABASE_KEY
 }
 }
-
 );
 
 if(!response.ok){
@@ -220,18 +212,12 @@ await response.json();
 
 if(!data.length){
 
-document.getElementById("loading")
-.style.display="none";
-
-document.getElementById("error")
-.textContent =
-"Pesanan tidak ditemukan.";
-
+showError("Pesanan tidak ditemukan.");
 return;
+
 }
 
-orderData =
-data[0];
+orderData = data[0];
 
 document.getElementById("loading")
 .style.display="none";
@@ -243,22 +229,28 @@ document.getElementById("orderId")
 .textContent =
 orderData.id;
 
+document.getElementById("customer")
+.textContent =
+orderData.customer_name || "-";
+
 document.getElementById("product")
 .textContent =
 orderData.product_name || "-";
 
+const quantity =
+Number(orderData.quantity || 1);
+
 document.getElementById("quantity")
 .textContent =
-orderData.quantity || 1;
+quantity;
 
 const total =
 Number(orderData.price_per_item || 0) *
-Number(orderData.quantity || 1);
+quantity;
 
 document.getElementById("total")
 .textContent =
-"Rp" +
-total.toLocaleString("id-ID");
+"Rp" + total.toLocaleString("id-ID");
 
 updateStatus(
 orderData.payment_status
@@ -270,14 +262,21 @@ catch(error){
 
 console.error(error);
 
+showError(
+"Gagal mengambil data pesanan."
+);
+
+}
+
+}
+
+function showError(message){
+
 document.getElementById("loading")
 .style.display="none";
 
 document.getElementById("error")
-.textContent =
-"Gagal mengambil data pesanan.";
-
-}
+.textContent=message;
 
 }
 
@@ -332,6 +331,9 @@ statusBox.textContent =
 
 button.disabled=false;
 
+button.textContent =
+"Saya Sudah Transfer";
+
 }
 
 }
@@ -340,56 +342,38 @@ async function konfirmasi(){
 
 if(!orderId){
 
-alert(
-"Nomor order tidak ditemukan."
-);
-
+alert("Nomor order tidak ditemukan.");
 return;
+
 }
 
 const button =
 document.getElementById("confirmButton");
 
 button.disabled=true;
-
-button.textContent =
-"Mengirim...";
+button.textContent="Mengirim...";
 
 try{
 
 const response =
 await fetch(
-
 SUPABASE_URL +
 "/rest/v1/orders?id=eq." +
 encodeURIComponent(orderId),
-
 {
 method:"PATCH",
 
 headers:{
-"Content-Type":
-"application/json",
-
-"apikey":
-SUPABASE_KEY,
-
-"Authorization":
-"Bearer " + SUPABASE_KEY,
-
-"Prefer":
-"return=minimal"
+"Content-Type":"application/json",
+"apikey":SUPABASE_KEY,
+"Authorization":"Bearer " + SUPABASE_KEY,
+"Prefer":"return=minimal"
 },
 
 body:JSON.stringify({
-
-payment_status:
-"waiting_verification"
-
+payment_status:"waiting_verification"
 })
-
 }
-
 );
 
 if(!response.ok){
