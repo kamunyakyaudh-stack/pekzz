@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PEKZZ</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f6f9;
+  color: #111827;
+}
+
+header {
+  background: #111827;
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+.logo {
+  font-size: 30px;
+  font-weight: bold;
+}
+
+.hero {
+  margin: 20px;
+  padding: 30px 20px;
+  border-radius: 18px;
+  background: #2563eb;
+  color: white;
+}
+
+.container {
+  max-width: 1000px;
+  margin: auto;
+  padding: 10px 20px 40px;
+}
+
+.products {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px #0002;
+}
+
+.icon {
+  font-size: 35px;
+}
+
+.category {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.price {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 12px;
+  border: 0;
+  border-radius: 9px;
+  background: #2563eb;
+  color: white;
+  font-weight: bold;
+}
+
+.checkout {
+  background: white;
+  padding: 20px;
+  margin-top: 25px;
+  border-radius: 15px;
+}
+
+input, select {
+  width: 100%;
+  padding: 12px;
+  margin: 7px 0 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.hidden {
+  display: none;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo">PEKZZ</div>
+  <div>TOP UP GAME</div>
+</header>
+
+<div class="hero">
+  <h1>Top Up Cepat & Mudah</h1>
+  <p>Selamat datang di Pekzz.</p>
+</div>
+
+<div class="container">
+
+<h2>Produk</h2>
+
+<div class="products">
+
+<div class="card">
+  <div class="icon">⚔️</div>
+  <div class="category">Mobile Legends</div>
+  <h3>ML 86 Diamonds</h3>
+  <div class="price">Rp20.000</div>
+  <button onclick="pilih('ML 86 Diamonds',20000)">Pilih</button>
+</div>
+
+<div class="card">
+  <div class="icon">🔥</div>
+  <div class="category">Free Fire</div>
+  <h3>FF 70 Diamonds</h3>
+  <div class="price">Rp10.000</div>
+  <button onclick="pilih('FF 70 Diamonds',10000)">Pilih</button>
+</div>
+
+<div class="card">
+  <div class="icon">🎯</div>
+  <div class="category">PUBG Mobile</div>
+  <h3>PUBG 60 UC</h3>
+  <div class="price">Rp15.000</div>
+  <button onclick="pilih('PUBG 60 UC',15000)">Pilih</button>
+</div>
+
+<div class="card">
+  <div class="icon">📱</div>
+  <div class="category">Pulsa</div>
+  <h3>Pulsa 10.000</h3>
+  <div class="price">Rp10.000</div>
+  <button onclick="pilih('Pulsa 10.000',10000)">Pilih</button>
+</div>
+
+<div class="card">
+  <div class="icon">🎟️</div>
+  <div class="category">Voucher Game</div>
+  <h3>Voucher Game 20.000</h3>
+  <div class="price">Rp20.000</div>
+  <button onclick="pilih('Voucher Game 20.000',20000)">Pilih</button>
+</div>
+
+</div>
+
+<div id="checkout" class="checkout hidden">
+
+<h2>Checkout</h2>
+
+<p id="produk"></p>
+
+<label>Nama</label>
+<input id="nama" placeholder="Nama">
+
+<label>Kontak</label>
+<input id="kontak" placeholder="WhatsApp / Email">
+
+<label>ID Game / Nomor Tujuan</label>
+<input id="tujuan" placeholder="ID tujuan">
+
+<label>Pembayaran</label>
+<select id="payment">
+  <option>DANA</option>
+  <option>QRIS</option>
+  <option>Transfer Bank</option>
+</select>
+
+<button onclick="pesan()">Buat Pesanan</button>
+
+</div>
+
+</div>
+
+<script>
+
+let produk = "";
+let harga = 0;
+
+function pilih(nama, nominal) {
+
+  produk = nama;
+  harga = nominal;
+
+  document.getElementById("checkout").classList.remove("hidden");
+
+  document.getElementById("produk").innerHTML =
+    "Produk: <b>" + nama + "</b><br>" +
+    "Harga: <b>Rp" +
+    nominal.toLocaleString("id-ID") +
+    "</b>";
+
+  document.getElementById("checkout").scrollIntoView({
+    behavior: "smooth"
+  });
+}
+
+function pesan() {
+
+  let nama = document.getElementById("nama").value;
+  let kontak = document.getElementById("kontak").value;
+  let tujuan = document.getElementById("tujuan").value;
+
+  if (nama === "" || kontak === "" || tujuan === "") {
+    alert("Lengkapi semua data terlebih dahulu.");
+    return;
+  }
+
+  alert(
+    "Pesanan berhasil dibuat!\n\n" +
+    "Produk: " + produk +
+    "\nHarga: Rp" + harga.toLocaleString("id-ID") +
+    "\n\nIni masih versi demo."
+  );
+}
+
+</script>
+
+</body>
+  </html>
