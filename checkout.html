@@ -1,0 +1,239 @@
+<!DOCTYPE html><html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PEKZZ - Checkout</title>
+<style>
+body{margin:0;font-family:Arial,sans-serif;background:#f3f4f6;color:#111827}
+header{background:#111827;color:white;text-align:center;padding:20px}
+.container{max-width:600px;margin:auto;padding:20px}
+.card{background:white;padding:24px;border-radius:16px;box-shadow:0 3px 12px #0002}
+.row{padding:14px 0;border-bottom:1px solid #eee}
+.label{font-size:13px;color:#6b7280}
+.value{font-weight:bold;margin-top:5px}
+.total{font-size:24px}
+.dana{font-size:22px;color:#2563eb}
+button{width:100%;padding:15px;margin-top:20px;border:0;border-radius:10px;background:#16a34a;color:white;font-weight:bold;font-size:16px}
+button:disabled{background:#9ca3af}
+.status{margin-top:20px;padding:13px;background:#fef3c7;color:#92400e;text-align:center;border-radius:10px;font-weight:bold}
+.error{color:#dc2626;font-weight:bold;margin-top:15px}
+</style>
+</head>
+<body><header>
+<h1>PEKZZ</h1>
+<p>Checkout & Pembayaran</p>
+</header><div class="container">
+<div class="card"><h2>Pembayaran Pesanan</h2><div id="loading">Memuat pesanan...</div><div id="content" style="display:none"><div class="row">
+<div class="label">Nomor Order</div>
+<div class="value" id="orderId"></div>
+</div><div class="row">
+<div class="label">Nama</div>
+<div class="value" id="customer"></div>
+</div><div class="row">
+<div class="label">Produk</div>
+<div class="value" id="product"></div>
+</div><div class="row">
+<div class="label">Jumlah</div>
+<div class="value" id="quantity"></div>
+</div><div class="row">
+<div class="label">Total Pembayaran</div>
+<div class="value total" id="total"></div>
+</div><div class="row">
+<div class="label">DANA Tujuan</div>
+<div class="value dana">089674161923</div>
+</div><p>Transfer sesuai total pembayaran ke nomor DANA di atas.</p><button id="confirmButton" onclick="konfirmasi()">
+Saya Sudah Transfer
+</button><div id="status" class="status">
+Menunggu Pembayaran
+</div></div><div id="error" class="error"></div></div>
+</div><script>
+
+const SUPABASE_URL =
+"https://ptluxzkjvdhzsiejsmov.supabase.co";
+
+const SUPABASE_KEY =
+"sb_publishable_KH094rcfrlbQZ2wT9iKbBw_3H4edUdE";
+
+const params =
+new URLSearchParams(window.location.search);
+
+const orderId =
+params.get("order");
+
+async function loadOrder(){
+
+if(!orderId){
+showError("Nomor order belum diberikan.");
+return;
+}
+
+try{
+
+const response = await fetch(
+SUPABASE_URL +
+"/rest/v1/rpc/get_order_for_tracking",
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+"apikey":SUPABASE_KEY,
+"Authorization":"Bearer " + SUPABASE_KEY
+},
+body:JSON.stringify({
+p_order_id:Number(orderId)
+})
+}
+);
+
+if(!response.ok){
+throw new Error(await response.text());
+}
+
+const result =
+await response.json();
+
+const order =
+result.get_order_for_tracking || result;
+
+if(!order || !order.id){
+showError("Pesanan tidak ditemukan.");
+return;
+}
+
+document.getElementById("loading").style.display="none";
+document.getElementById("content").style.display="block";
+
+document.getElementById("orderId").textContent=order.id;
+document.getElementById("customer").textContent=order.customer_name || "-";
+document.getElementById("product").textContent=order.product_name || "-";
+document.getElementById("quantity").textContent=order.quantity || 1;
+
+const total =
+Number(order.price_per_item || 0) *
+Number(order.quantity || 1);
+
+document.getElementById("total").textContent =
+"Rp" + total.toLocaleString("id-ID");
+
+updateStatus(order.payment_status);
+
+}
+
+catch(error){
+
+console.error(error);
+showError("Pesanan tidak ditemukan.");
+
+}
+
+}
+
+function updateStatus(status){
+
+const button =
+document.getElementById("confirmButton");
+
+const box =
+document.getElementById("status");
+
+if(status === "paid"){
+
+box.textContent="Pembayaran Diterima";
+button.disabled=true;
+button.textContent="Pembayaran Diterima";
+
+}
+else if(status === "waiting_verification"){
+
+box.textContent="Menunggu Verifikasi";
+button.disabled=true;
+button.textContent="Sudah Dikonfirmasi";
+
+}
+else if(status === "rejected"){
+
+box.textContent="Pembayaran Ditolak";
+button.disabled=true;
+button.textContent="Pembayaran Ditolak";
+
+}
+else{
+
+box.textContent="Menunggu Pembayaran";
+button.disabled=false;
+button.textContent="Saya Sudah Transfer";
+
+}
+
+}
+
+async function konfirmasi(){
+
+if(!orderId){
+alert("Nomor order tidak ditemukan.");
+return;
+}
+
+const button =
+document.getElementById("confirmButton");
+
+button.disabled=true;
+button.textContent="Mengirim...";
+
+try{
+
+const response =
+await fetch(
+SUPABASE_URL +
+"/rest/v1/orders?id=eq." +
+encodeURIComponent(orderId),
+{
+method:"PATCH",
+headers:{
+"Content-Type":"application/json",
+"apikey":SUPABASE_KEY,
+"Authorization":"Bearer " + SUPABASE_KEY,
+"Prefer":"return=minimal"
+},
+body:JSON.stringify({
+payment_status:"waiting_verification"
+})
+}
+);
+
+if(!response.ok){
+throw new Error(await response.text());
+}
+
+document.getElementById("status").textContent =
+"Menunggu Verifikasi";
+
+button.textContent="Sudah Dikonfirmasi";
+
+alert("Konfirmasi pembayaran berhasil dikirim.");
+
+}
+catch(error){
+
+console.error(error);
+
+button.disabled=false;
+button.textContent="Saya Sudah Transfer";
+
+alert("Konfirmasi gagal.");
+
+}
+
+}
+
+function showError(message){
+
+document.getElementById("loading").style.display="none";
+document.getElementById("error").textContent=message;
+
+}
+
+loadOrder();
+
+</script></body>
+</html>
