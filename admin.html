@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PEKZZ - Admin</title>
+<title>PEKZZ Admin</title>
 
 <style>
 body{
@@ -12,88 +12,67 @@ body{
   background:#f3f4f6;
   color:#111827;
 }
-
 header{
   background:#111827;
   color:white;
   padding:20px;
   text-align:center;
 }
-
 .container{
   max-width:900px;
   margin:auto;
   padding:20px;
 }
-
 .card{
   background:white;
   padding:20px;
-  margin-bottom:15px;
   border-radius:15px;
+  margin-bottom:15px;
   box-shadow:0 3px 12px #0002;
 }
-
-.order{
-  border-top:1px solid #eee;
-  padding-top:15px;
-  margin-top:15px;
-}
-
-.row{
-  margin:8px 0;
-}
-
-.label{
-  color:#6b7280;
-  font-size:13px;
-}
-
-.value{
-  font-weight:bold;
-}
-
-button{
-  padding:11px 14px;
-  border:0;
+input,button{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  box-sizing:border-box;
   border-radius:8px;
+}
+input{
+  border:1px solid #ccc;
+}
+button{
+  border:0;
+  background:#2563eb;
   color:white;
   font-weight:bold;
-  margin:5px 5px 0 0;
-  cursor:pointer;
 }
-
-.accept{
-  background:#16a34a;
-}
-
-.reject{
+.logout{
   background:#dc2626;
 }
-
-.process{
-  background:#2563eb;
+.order{
+  border-top:1px solid #ddd;
+  margin-top:15px;
+  padding-top:15px;
 }
-
-.complete{
-  background:#7c3aed;
+.action{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
 }
-
-.refresh{
-  width:100%;
-  background:#111827;
+.action button{
+  width:auto;
 }
-
+.green{background:#16a34a}
+.red{background:#dc2626}
+.purple{background:#7c3aed}
 .message{
+  margin-top:12px;
   padding:12px;
   background:#f3f4f6;
   border-radius:8px;
-  margin-bottom:15px;
 }
-
-.error{
-  color:#dc2626;
-  font-weight:bold;
+.hidden{
+  display:none;
 }
 </style>
 </head>
@@ -107,19 +86,49 @@ button{
 
 <div class="container">
 
+<div id="loginBox" class="card">
+
+<h2>Login Admin</h2>
+
+<input
+id="email"
+type="email"
+placeholder="Email admin">
+
+<input
+id="password"
+type="password"
+placeholder="Password">
+
+<button onclick="login()">
+Login
+</button>
+
+<div id="loginMessage"></div>
+
+</div>
+
+<div id="adminBox" class="hidden">
+
 <div class="card">
 
 <h2>Daftar Pesanan</h2>
 
-<button class="refresh" onclick="loadOrders()">
-Refresh Pesanan
+<button onclick="loadOrders()">
+🔄 Refresh Pesanan
+</button>
+
+<button class="logout" onclick="logout()">
+Keluar
 </button>
 
 <div id="message" class="message">
-Memuat pesanan...
+Memuat...
 </div>
 
 <div id="orders"></div>
+
+</div>
 
 </div>
 
@@ -133,18 +142,102 @@ const SUPABASE_URL =
 const SUPABASE_KEY =
 "sb_publishable_KH094rcfrlbQZ2wT9iKbBw_3H4edUdE";
 
+let accessToken = null;
+
+async function login(){
+
+const email =
+document.getElementById("email").value.trim();
+
+const password =
+document.getElementById("password").value;
+
+const msg =
+document.getElementById("loginMessage");
+
+if(!email || !password){
+
+msg.innerHTML =
+'<div class="message">Isi email dan password.</div>';
+
+return;
+}
+
+msg.innerHTML =
+'<div class="message">Login...</div>';
+
+try{
+
+const response =
+await fetch(
+SUPABASE_URL +
+"/auth/v1/token?grant_type=password",
+{
+method:"POST",
+
+headers:{
+"Content-Type":"application/json",
+"apikey":SUPABASE_KEY
+},
+
+body:JSON.stringify({
+email:email,
+password:password
+})
+}
+);
+
+const data =
+await response.json();
+
+if(!response.ok){
+
+throw new Error(
+data.error_description ||
+data.msg ||
+"Login gagal"
+);
+
+}
+
+accessToken =
+data.access_token;
+
+document
+.getElementById("loginBox")
+.classList.add("hidden");
+
+document
+.getElementById("adminBox")
+.classList.remove("hidden");
+
+await loadOrders();
+
+}
+
+catch(error){
+
+msg.innerHTML =
+'<div class="message">' +
+error.message +
+'</div>';
+
+}
+
+}
+
 async function loadOrders(){
 
 const message =
 document.getElementById("message");
 
-const ordersBox =
+const orders =
 document.getElementById("orders");
 
 message.textContent =
 "Memuat pesanan...";
 
-ordersBox.innerHTML="";
+orders.innerHTML="";
 
 try{
 
@@ -152,29 +245,30 @@ const response =
 await fetch(
 SUPABASE_URL +
 "/rest/v1/orders" +
-"?select=id,customer_name,product_name,quantity,price_per_item,payment_method,payment_status,status,created_at" +
+"?select=*" +
 "&order=id.desc",
 {
 headers:{
 "apikey":SUPABASE_KEY,
 "Authorization":
-"Bearer " + SUPABASE_KEY
+"Bearer " + accessToken
 }
 }
 );
-
-if(!response.ok){
-
-throw new Error(
-await response.text()
-);
-
-}
 
 const data =
 await response.json();
 
-if(!data.length){
+if(!response.ok){
+
+throw new Error(
+data.message ||
+"Pesanan tidak dapat diambil"
+);
+
+}
+
+if(data.length === 0){
 
 message.textContent =
 "Belum ada pesanan.";
@@ -184,8 +278,7 @@ return;
 }
 
 message.textContent =
-"Pesanan ditemukan: " +
-data.length;
+"Total pesanan: " + data.length;
 
 data.forEach(order=>{
 
@@ -202,74 +295,55 @@ div.innerHTML=`
 
 <h3>Order #${order.id}</h3>
 
-<div class="row">
-<div class="label">Nama</div>
-<div class="value">
-${escapeHtml(order.customer_name || "-")}
-</div>
-</div>
+<p>
+<b>Nama:</b>
+${safe(order.customer_name)}
+</p>
 
-<div class="row">
-<div class="label">Produk</div>
-<div class="value">
-${escapeHtml(order.product_name || "-")}
-</div>
-</div>
+<p>
+<b>Produk:</b>
+${safe(order.product_name)}
+</p>
 
-<div class="row">
-<div class="label">Jumlah</div>
-<div class="value">
+<p>
+<b>Jumlah:</b>
 ${order.quantity || 1}
-</div>
-</div>
+</p>
 
-<div class="row">
-<div class="label">Total</div>
-<div class="value">
+<p>
+<b>Total:</b>
 Rp${total.toLocaleString("id-ID")}
-</div>
-</div>
+</p>
 
-<div class="row">
-<div class="label">Metode Pembayaran</div>
-<div class="value">
-${escapeHtml(order.payment_method || "-")}
-</div>
-</div>
+<p>
+<b>Pembayaran:</b>
+${safe(order.payment_status)}
+</p>
 
-<div class="row">
-<div class="label">Pembayaran</div>
-<div class="value">
-${formatPayment(order.payment_status)}
-</div>
-</div>
+<p>
+<b>Status:</b>
+${safe(order.status)}
+</p>
 
-<div class="row">
-<div class="label">Status Pesanan</div>
-<div class="value">
-${formatStatus(order.status)}
-</div>
-</div>
+<div class="action">
 
-<div>
-
-<button class="accept"
+<button class="green"
 onclick="updatePayment(${order.id},'paid')">
 Terima Pembayaran
 </button>
 
-<button class="reject"
+<button class="red"
 onclick="updatePayment(${order.id},'rejected')">
 Tolak Pembayaran
 </button>
 
-<button class="process"
-onclick="updateOrder(${order.id},'processing')">
-Proses Pesanan
+<button
+onclick="updateStatus(${order.id},'processing')">
+Proses
 </button>
 
-<button class="complete"
-onclick="updateOrder(${order.id},'completed')">
+<button class="purple"
+onclick="updateStatus(${order.id},'completed')">
 Selesai
 </button>
 
@@ -277,7 +351,7 @@ Selesai
 
 `;
 
-ordersBox.appendChild(div);
+orders.appendChild(div);
 
 });
 
@@ -285,12 +359,8 @@ ordersBox.appendChild(div);
 
 catch(error){
 
-console.error(error);
-
-message.innerHTML =
-'<div class="error">' +
-"Gagal mengambil pesanan." +
-"</div>";
+message.textContent =
+"Gagal: " + error.message;
 
 }
 
@@ -298,13 +368,11 @@ message.innerHTML =
 
 async function updatePayment(id,status){
 
-try{
-
 const response =
 await fetch(
 SUPABASE_URL +
 "/rest/v1/orders?id=eq." +
-encodeURIComponent(id),
+id,
 {
 method:"PATCH",
 
@@ -312,7 +380,7 @@ headers:{
 "Content-Type":"application/json",
 "apikey":SUPABASE_KEY,
 "Authorization":
-"Bearer " + SUPABASE_KEY,
+"Bearer " + accessToken,
 "Prefer":"return=minimal"
 },
 
@@ -324,43 +392,25 @@ payment_status:status
 
 if(!response.ok){
 
-throw new Error(
-await response.text()
-);
+alert("Gagal mengubah pembayaran.");
+
+return;
 
 }
 
-alert(
-status === "paid"
-? "Pembayaran diterima."
-: "Pembayaran ditolak."
-);
+alert("Berhasil diubah.");
 
 loadOrders();
 
 }
 
-catch(error){
-
-alert(
-"Gagal mengubah pembayaran."
-);
-
-console.error(error);
-
-}
-
-}
-
-async function updateOrder(id,status){
-
-try{
+async function updateStatus(id,status){
 
 const response =
 await fetch(
 SUPABASE_URL +
 "/rest/v1/orders?id=eq." +
-encodeURIComponent(id),
+id,
 {
 method:"PATCH",
 
@@ -368,7 +418,7 @@ headers:{
 "Content-Type":"application/json",
 "apikey":SUPABASE_KEY,
 "Authorization":
-"Bearer " + SUPABASE_KEY,
+"Bearer " + accessToken,
 "Prefer":"return=minimal"
 },
 
@@ -380,64 +430,39 @@ status:status
 
 if(!response.ok){
 
-throw new Error(
-await response.text()
-);
+alert("Gagal mengubah status.");
+
+return;
 
 }
 
-alert(
-status === "processing"
-? "Pesanan sedang diproses."
-: "Pesanan selesai."
-);
+alert("Status berhasil diubah.");
 
 loadOrders();
 
 }
 
-catch(error){
+function logout(){
 
-alert(
-"Gagal mengubah status pesanan."
-);
+accessToken=null;
 
-console.error(error);
+document
+.getElementById("adminBox")
+.classList.add("hidden");
 
-}
+document
+.getElementById("loginBox")
+.classList.remove("hidden");
 
-}
-
-function formatPayment(status){
-
-if(status === "paid")
-return "Pembayaran Diterima";
-
-if(status === "waiting_verification")
-return "Menunggu Verifikasi";
-
-if(status === "rejected")
-return "Pembayaran Ditolak";
-
-return "Belum Dibayar";
+document
+.getElementById("password")
+.value="";
 
 }
 
-function formatStatus(status){
+function safe(value){
 
-if(status === "completed")
-return "Selesai";
-
-if(status === "processing")
-return "Sedang Diproses";
-
-return "Menunggu Pembayaran";
-
-}
-
-function escapeHtml(value){
-
-return String(value)
+return String(value || "-")
 .replace(/&/g,"&amp;")
 .replace(/</g,"&lt;")
 .replace(/>/g,"&gt;")
@@ -445,8 +470,6 @@ return String(value)
 .replace(/'/g,"&#039;");
 
 }
-
-loadOrders();
 
 </script>
 
