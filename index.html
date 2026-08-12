@@ -87,6 +87,11 @@ button{
   cursor:pointer;
 }
 
+button:disabled{
+  background:#9ca3af;
+  cursor:not-allowed;
+}
+
 input,select{
   width:100%;
   padding:12px;
@@ -105,6 +110,7 @@ input,select{
   padding:12px;
   border-radius:8px;
   background:#f3f4f6;
+  word-break:break-word;
 }
 </style></head><body><header>
   <div class="logo">PEKZZ</div>
@@ -150,9 +156,9 @@ input,select{
 <input id="tujuan" placeholder="ID Game / Nomor Tujuan">
 
 <select id="payment">
-  <option>DANA</option>
-  <option>QRIS</option>
-  <option>Transfer Bank</option>
+  <option value="DANA">DANA</option>
+  <option value="QRIS">QRIS</option>
+  <option value="Transfer Bank">Transfer Bank</option>
 </select>
 
 <button id="orderButton" onclick="buatPesanan()">
@@ -182,7 +188,9 @@ function pilih(nama,hargaProduk){
     .classList.remove("hidden");
 
   document.getElementById("produk").innerHTML =
-    "Produk: <b>" + escapeHtml(produk) + "</b><br>" +
+    "Produk: <b>" +
+    escapeHtml(produk) +
+    "</b><br>" +
     "Harga: <b>Rp" +
     harga.toLocaleString("id-ID") +
     "</b>";
@@ -221,7 +229,9 @@ async function buatPesanan(){
   if(!produk || !harga){
 
     message.innerHTML =
-      '<div class="message">Pilih produk terlebih dahulu.</div>';
+      '<div class="message">' +
+      'Pilih produk terlebih dahulu.' +
+      '</div>';
 
     return;
   }
@@ -229,7 +239,9 @@ async function buatPesanan(){
   if(!nama || !kontak || !tujuan){
 
     message.innerHTML =
-      '<div class="message">Lengkapi semua data terlebih dahulu.</div>';
+      '<div class="message">' +
+      'Lengkapi semua data terlebih dahulu.' +
+      '</div>';
 
     return;
   }
@@ -238,12 +250,15 @@ async function buatPesanan(){
   button.textContent = "Membuat Pesanan...";
 
   message.innerHTML =
-    '<div class="message">Menyimpan pesanan...</div>';
+    '<div class="message">' +
+    'Menyimpan pesanan...' +
+    '</div>';
 
   try{
 
     const response = await fetch(
-      SUPABASE_URL + "/rest/v1/orders",
+      SUPABASE_URL +
+      "/rest/v1/rpc/create_order",
       {
         method:"POST",
 
@@ -251,22 +266,20 @@ async function buatPesanan(){
           "Content-Type":"application/json",
           "apikey":SUPABASE_KEY,
           "Authorization":
-            "Bearer " + SUPABASE_KEY,
-          "Prefer":
-            "return=representation"
+            "Bearer " + SUPABASE_KEY
         },
 
         body:JSON.stringify({
 
-          customer_name:nama,
-          product_name:produk,
-          quantity:1,
-          price_per_item:harga,
-          payment_method:payment,
-          payment_status:"unpaid",
-          status:"pending",
-          customer_email:kontak,
-          notes:"Tujuan: " + tujuan
+          p_data:{
+            customer_name:nama,
+            product_name:produk,
+            quantity:1,
+            price_per_item:harga,
+            payment_method:payment,
+            customer_email:kontak,
+            notes:"Tujuan: " + tujuan
+          }
 
         })
       }
@@ -280,32 +293,26 @@ async function buatPesanan(){
 
     }
 
-    const data =
+    const order =
       await response.json();
 
-    if(
-      !Array.isArray(data) ||
-      !data[0] ||
-      !data[0].id
-    ){
+    if(!order || !order.id){
 
       throw new Error(
-        "Order berhasil dibuat tetapi ID order tidak diterima."
+        "Nomor order tidak diterima."
       );
 
     }
 
-    const orderId =
-      data[0].id;
-
     /*
-      Nomor order dikirim langsung
-      ke halaman Checkout.
+      Order berhasil dibuat.
+      Pengguna otomatis diarahkan
+      ke halaman pembayaran.
     */
 
     window.location.href =
       "checkout.html?order=" +
-      encodeURIComponent(orderId);
+      encodeURIComponent(order.id);
 
   }
 
@@ -314,11 +321,12 @@ async function buatPesanan(){
     console.error(error);
 
     button.disabled = false;
-    button.textContent = "Buat Pesanan";
+    button.textContent =
+      "Buat Pesanan";
 
     message.innerHTML =
       '<div class="message">' +
-      'Pesanan gagal dibuat:<br>' +
+      '<b>Pesanan gagal dibuat:</b><br>' +
       escapeHtml(error.message) +
       '</div>';
 
