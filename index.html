@@ -1,0 +1,219 @@
+<!DOCTYPE html><html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PEKZZ - Top Up Game</title><style>
+body{margin:0;font-family:Arial,sans-serif;background:#f4f6f9;color:#111827}
+header{background:#111827;color:white;padding:20px;text-align:center}
+.logo{font-size:30px;font-weight:bold}
+.nav{display:flex;gap:10px;max-width:900px;margin:15px auto 0;padding:0 20px;box-sizing:border-box}
+.nav a{flex:1;text-align:center;text-decoration:none;padding:12px;border-radius:9px;background:white;color:#111827;font-weight:bold;box-shadow:0 2px 8px #0001}
+.container{max-width:900px;margin:auto;padding:20px}
+.hero{background:#2563eb;color:white;padding:25px;border-radius:16px}
+.products{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-top:20px}
+.card,.checkout{background:white;padding:20px;border-radius:15px;box-shadow:0 3px 12px #0002}
+.price{font-weight:bold;font-size:18px}
+button{width:100%;padding:12px;border:0;border-radius:8px;background:#2563eb;color:white;font-weight:bold;margin-top:10px;cursor:pointer}
+button:disabled{background:#9ca3af}
+input,select{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccc;border-radius:8px;box-sizing:border-box}
+.hidden{display:none}
+.message{margin-top:15px;padding:12px;border-radius:8px;background:#f3f4f6;word-break:break-word}
+</style></head><body><header>
+<div class="logo">PEKZZ</div>
+TOP UP GAME
+</header><div class="nav">
+<a href="index.html">🛒 Belanja</a>
+<a href="riwayat.html">🔎 Cek Pesanan</a>
+</div><div class="container"><div class="hero">
+<h1>Top Up Cepat & Mudah</h1>
+<p>Pesan produk game dengan mudah.</p>
+</div><h2>Produk</h2><div class="products"><div class="card">
+<h3>⚔️ ML 86 Diamonds</h3>
+<p class="price">Rp20.000</p>
+<button onclick="pilih('ML 86 Diamonds',20000)">Pilih</button>
+</div><div class="card">
+<h3>🔥 FF 70 Diamonds</h3>
+<p class="price">Rp10.000</p>
+<button onclick="pilih('FF 70 Diamonds',10000)">Pilih</button>
+</div><div class="card">
+<h3>🎯 PUBG 60 UC</h3>
+<p class="price">Rp15.000</p>
+<button onclick="pilih('PUBG 60 UC',15000)">Pilih</button>
+</div></div><div id="checkout" class="checkout hidden"><h2>Checkout</h2><p id="produk"></p><input id="nama" placeholder="Nama"><input id="kontak" placeholder="WhatsApp / Email"><input id="tujuan" placeholder="ID Game / Nomor Tujuan"><select id="payment">
+<option value="DANA">DANA</option>
+<option value="QRIS">QRIS</option>
+<option value="Transfer Bank">Transfer Bank</option>
+</select><button id="orderButton" onclick="buatPesanan()">
+Buat Pesanan
+</button><div id="message"></div></div></div><script>
+
+const SUPABASE_URL =
+"https://ptluxzkjvdhzsiejsmov.supabase.co";
+
+const SUPABASE_KEY =
+"sb_publishable_KH094rcfrlbQZ2wT9iKbBw_3H4edUdE";
+
+let produk = "";
+let harga = 0;
+
+function pilih(nama,hargaProduk){
+
+produk = nama;
+harga = hargaProduk;
+
+document.getElementById("checkout")
+.classList.remove("hidden");
+
+document.getElementById("produk").innerHTML =
+"Produk: <b>" +
+escapeHtml(produk) +
+"</b><br>Harga: <b>Rp" +
+harga.toLocaleString("id-ID") +
+"</b>";
+
+document.getElementById("checkout")
+.scrollIntoView({behavior:"smooth"});
+
+}
+
+async function buatPesanan(){
+
+const nama =
+document.getElementById("nama").value.trim();
+
+const kontak =
+document.getElementById("kontak").value.trim();
+
+const tujuan =
+document.getElementById("tujuan").value.trim();
+
+const payment =
+document.getElementById("payment").value;
+
+const message =
+document.getElementById("message");
+
+const button =
+document.getElementById("orderButton");
+
+if(!produk || !harga){
+
+message.innerHTML =
+'<div class="message">Pilih produk terlebih dahulu.</div>';
+
+return;
+
+}
+
+if(!nama || !kontak || !tujuan){
+
+message.innerHTML =
+'<div class="message">Lengkapi semua data terlebih dahulu.</div>';
+
+return;
+
+}
+
+button.disabled = true;
+button.textContent = "Membuat Pesanan...";
+
+message.innerHTML =
+'<div class="message">Menyimpan pesanan...</div>';
+
+try{
+
+const response = await fetch(
+SUPABASE_URL + "/rest/v1/rpc/create_order",
+{
+method:"POST",
+
+headers:{
+"Content-Type":"application/json",
+"apikey":SUPABASE_KEY,
+"Authorization":"Bearer " + SUPABASE_KEY
+},
+
+body:JSON.stringify({
+
+p_data:{
+customer_name:nama,
+product_name:produk,
+quantity:1,
+price_per_item:harga,
+payment_method:payment,
+customer_email:kontak,
+notes:"Tujuan: " + tujuan
+}
+
+})
+}
+);
+
+if(!response.ok){
+
+throw new Error(
+await response.text()
+);
+
+}
+
+const data =
+await response.json();
+
+/*
+Supabase mengembalikan:
+{
+  create_order: {
+    id: 61,
+    ...
+  }
+}
+*/
+
+const order =
+data.create_order || data;
+
+if(!order || !order.id){
+
+throw new Error(
+"Nomor order tidak diterima."
+);
+
+}
+
+window.location.href =
+"checkout.html?order=" +
+encodeURIComponent(order.id);
+
+}
+
+catch(error){
+
+console.error(error);
+
+button.disabled = false;
+button.textContent = "Buat Pesanan";
+
+message.innerHTML =
+'<div class="message">' +
+'<b>Pesanan gagal dibuat:</b><br>' +
+escapeHtml(error.message) +
+'</div>';
+
+}
+
+}
+
+function escapeHtml(value){
+
+return String(value)
+.replace(/&/g,"&amp;")
+.replace(/</g,"&lt;")
+.replace(/>/g,"&gt;")
+.replace(/"/g,"&quot;")
+.replace(/'/g,"&#039;");
+
+}
+
+</script></body>
+</html>
