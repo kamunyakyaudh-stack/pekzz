@@ -2,26 +2,25 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PEKZZ Admin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PEKZZ ADMIN</title>
 
 <style>
 body{
   margin:0;
   font-family:Arial,sans-serif;
   background:#f3f4f6;
-  color:#111827;
 }
 
 header{
   background:#111827;
   color:white;
-  padding:20px;
   text-align:center;
+  padding:25px;
 }
 
 .container{
-  max-width:800px;
+  max-width:700px;
   margin:auto;
   padding:20px;
 }
@@ -39,47 +38,42 @@ input{
   box-sizing:border-box;
   padding:13px;
   margin:8px 0;
-  border:1px solid #d1d5db;
-  border-radius:9px;
+  border:1px solid #ccc;
+  border-radius:8px;
 }
 
 button{
+  padding:13px 18px;
   border:0;
   border-radius:8px;
-  padding:11px 14px;
-  margin:5px 3px 0 0;
   background:#2563eb;
   color:white;
   font-weight:bold;
+  cursor:pointer;
 }
 
-.danger{
-  background:#dc2626;
-}
-
-.success{
-  background:#16a34a;
-}
-
-.logout{
-  background:#6b7280;
+button:active{
+  transform:scale(.98);
 }
 
 .hidden{
   display:none;
 }
 
-.status{
-  padding:8px;
-  border-radius:7px;
-  margin:8px 0;
-  background:#f3f4f6;
-}
-
 .error{
   color:#dc2626;
   margin-top:10px;
-  font-weight:bold;
+}
+
+.success{
+  color:#16a34a;
+  margin-top:10px;
+}
+
+.order{
+  border-top:1px solid #ddd;
+  padding-top:15px;
+  margin-top:15px;
 }
 </style>
 </head>
@@ -93,8 +87,6 @@ button{
 
 <div class="container">
 
-<!-- LOGIN -->
-
 <div id="loginBox" class="card">
 
 <h2>Login Admin</h2>
@@ -103,6 +95,7 @@ button{
 id="email"
 type="email"
 placeholder="Email Admin"
+value="raufmaruf003@gmail.com"
 >
 
 <input
@@ -111,91 +104,357 @@ type="password"
 placeholder="Password"
 >
 
-<button onclick="login()">
+<button id="loginButton">
 Login
 </button>
 
-<div id="loginMessage" class="error"></div>
+<div id="message"></div>
 
 </div>
-
-
-<!-- ADMIN -->
 
 <div id="adminBox" class="hidden">
 
 <div class="card">
 
-<b id="adminEmail"></b>
+<b id="loggedEmail"></b>
 
-<button
-class="logout"
-onclick="logout()">
-Keluar
+<br><br>
+
+<button id="refreshButton">
+Refresh Pesanan
 </button>
 
-<button
-onclick="loadOrders()">
-Refresh Pesanan
+<button id="logoutButton">
+Keluar
 </button>
 
 </div>
 
 <div id="orders">
-Memuat pesanan...
+Memuat...
 </div>
 
 </div>
 
 </div>
-
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
 
-const SUPABASE_URL =
+const URL =
 "https://ptluxzkjvdhzsiejsmov.supabase.co";
 
-const SUPABASE_KEY =
+const KEY =
 "sb_publishable_KH094rcfrlbQZ2wT9iKbBw_3H4edUdE";
 
-const client =
-supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+const db =
+window.supabase.createClient(URL,KEY);
 
+const loginButton =
+document.getElementById("loginButton");
 
-/* CEK LOGIN */
-
-async function checkSession(){
-
-const {
-  data:{
-    session
-  }
-} =
-await client.auth.getSession();
-
-if(session){
-
-showAdmin(session);
-
-}
-else{
-
-showLogin();
-
-}
-
-}
-
-
-/* LOGIN */
-
-async function login(){
+loginButton.addEventListener(
+"click",
+async function(){
 
 const email =
-document.getElementById("email")
-.value.trim
+document.getElementById("email").value.trim();
+
+const password =
+document.getElementById("password").value;
+
+const message =
+document.getElementById("message");
+
+if(!email || !password){
+
+message.className="error";
+message.textContent=
+"Email dan password wajib diisi.";
+
+return;
+
+}
+
+loginButton.disabled=true;
+loginButton.textContent="Login...";
+
+const result =
+await db.auth.signInWithPassword({
+email:email,
+password:password
+});
+
+if(result.error){
+
+message.className="error";
+
+message.textContent=
+"Login gagal: "+
+result.error.message;
+
+loginButton.disabled=false;
+loginButton.textContent="Login";
+
+return;
+
+}
+
+message.className="success";
+message.textContent="Login berhasil.";
+
+showAdmin(result.data.session);
+
+});
+
+async function showAdmin(session){
+
+document.getElementById("loginBox")
+.classList.add("hidden");
+
+document.getElementById("adminBox")
+.classList.remove("hidden");
+
+document.getElementById("loggedEmail")
+.textContent=
+"Login: "+
+session.user.email;
+
+loadOrders();
+
+}
+
+async function loadOrders(){
+
+const box =
+document.getElementById("orders");
+
+box.innerHTML=
+"Memuat pesanan...";
+
+const result =
+await db
+.from("orders")
+.select("*")
+.order("id",{ascending:false});
+
+if(result.error){
+
+box.innerHTML=
+'<div class="card error">'+
+result.error.message+
+'</div>';
+
+return;
+
+}
+
+if(!result.data.length){
+
+box.innerHTML=
+'<div class="card">Belum ada pesanan.</div>';
+
+return;
+
+}
+
+box.innerHTML="";
+
+result.data.forEach(order=>{
+
+const total =
+Number(order.price_per_item||0) *
+Number(order.quantity||1);
+
+const div =
+document.createElement("div");
+
+div.className="card order";
+
+div.innerHTML=`
+
+<h2>Order #${order.id}</h2>
+
+<p>Nama: ${safe(order.customer_name)}</p>
+
+<p>Produk: ${safe(order.product_name)}</p>
+
+<p>Jumlah: ${order.quantity||1}</p>
+
+<p>Harga: Rp${total.toLocaleString("id-ID")}</p>
+
+<p>Kontak: ${safe(order.customer_email)}</p>
+
+<p>Metode pembayaran:
+${safe(order.payment_method)}</p>
+
+<p>Status pembayaran:
+<b>${paymentStatus(order.payment_status)}</b>
+</p>
+
+<p>Status pesanan:
+<b>${orderStatus(order.status)}</b>
+</p>
+
+<button onclick="acceptPayment(${order.id})">
+Pembayaran Diterima
+</button>
+
+<button onclick="rejectOrder(${order.id})">
+Tolak
+</button>
+
+<button onclick="completeOrder(${order.id})">
+Pesanan Selesai
+</button>
+
+`;
+
+box.appendChild(div);
+
+});
+
+}
+
+function paymentStatus(status){
+
+if(status==="waiting_verification")
+return "Menunggu Verifikasi";
+
+if(status==="paid")
+return "Pembayaran Diterima";
+
+if(status==="rejected")
+return "Pembayaran Ditolak";
+
+return "Belum Dibayar";
+
+}
+
+function orderStatus(status){
+
+if(status==="pending")
+return "Menunggu Pembayaran";
+
+if(status==="processing")
+return "Sedang Diproses";
+
+if(status==="completed")
+return "Selesai";
+
+if(status==="cancelled")
+return "Dibatalkan";
+
+return status||"-";
+
+}
+
+async function acceptPayment(id){
+
+if(!confirm(
+"Terima pembayaran Order #"+id+"?"
+)) return;
+
+const result =
+await db
+.from("orders")
+.update({
+payment_status:"paid",
+status:"processing"
+})
+.eq("id",id);
+
+if(result.error){
+
+alert(result.error.message);
+return;
+
+}
+
+loadOrders();
+
+}
+
+async function rejectOrder(id){
+
+if(!confirm(
+"Tolak Order #"+id+"?"
+)) return;
+
+const result =
+await db
+.from("orders")
+.update({
+payment_status:"rejected",
+status:"cancelled"
+})
+.eq("id",id);
+
+if(result.error){
+
+alert(result.error.message);
+return;
+
+}
+
+loadOrders();
+
+}
+
+async function completeOrder(id){
+
+if(!confirm(
+"Selesaikan Order #"+id+"?"
+)) return;
+
+const result =
+await db
+.from("orders")
+.update({
+status:"completed"
+})
+.eq("id",id);
+
+if(result.error){
+
+alert(result.error.message);
+return;
+
+}
+
+loadOrders();
+
+}
+
+document.getElementById("refreshButton")
+.addEventListener(
+"click",
+loadOrders
+);
+
+document.getElementById("logoutButton")
+.addEventListener(
+"click",
+async function(){
+
+await db.auth.signOut();
+
+location.reload();
+
+});
+
+function safe(value){
+
+return String(value||"-")
+.replace(/&/g,"&amp;")
+.replace(/</g,"&lt;")
+.replace(/>/g,"&gt;")
+.replace(/"/g,"&quot;");
+
+}
+
+</script>
+
+</body>
+</html>
