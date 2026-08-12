@@ -67,7 +67,10 @@ if(!response.ok){
 throw new Error(await response.text());
 }
 
-const order = await response.json();
+const raw = await response.json();
+
+const order =
+Array.isArray(raw) ? raw[0] : raw;
 
 if(!order || !order.id){
 result.innerHTML =
@@ -79,27 +82,37 @@ const total =
 Number(order.price_per_item || 0) *
 Number(order.quantity || 1);
 
-let pembayaran = order.payment_status;
+let pembayaran =
+order.payment_status;
 
-if(pembayaran === "paid")
+if(pembayaran === "paid"){
 pembayaran = "Pembayaran Diterima";
-else if(pembayaran === "waiting_verification")
+}
+else if(pembayaran === "waiting_verification"){
 pembayaran = "Menunggu Verifikasi";
-else if(pembayaran === "rejected")
+}
+else if(pembayaran === "rejected"){
 pembayaran = "Pembayaran Ditolak";
-else
+}
+else{
 pembayaran = "Belum Dibayar";
+}
 
-let status = order.status;
+let status =
+order.status;
 
-if(status === "pending")
+if(status === "pending"){
 status = "Menunggu Pembayaran";
-else if(status === "processing")
+}
+else if(status === "processing"){
 status = "Sedang Diproses";
-else if(status === "completed")
+}
+else if(status === "completed"){
 status = "Selesai";
-else if(status === "cancelled")
+}
+else if(status === "cancelled"){
 status = "Dibatalkan";
+}
 
 result.innerHTML = `
 
