@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PEKZZ ADMIN</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#f3f4f6;
+  color:#111827;
+}
+header{
+  background:#111827;
+  color:white;
+  text-align:center;
+  padding:25px;
+}
+.container{
+  max-width:700px;
+  margin:auto;
+  padding:20px;
+}
+.card{
+  background:white;
+  padding:20px;
+  border-radius:15px;
+  margin-bottom:15px;
+  box-shadow:0 3px 12px #0002;
+}
+input{
+  width:100%;
+  box-sizing:border-box;
+  padding:13px;
+  margin:8px 0;
+  border:1px solid #ccc;
+  border-radius:8px;
+}
+button{
+  width:100%;
+  padding:13px;
+  margin-top:10px;
+  border:0;
+  border-radius:8px;
+  background:#2563eb;
+  color:white;
+  font-weight:bold;
+}
+.hidden{
+  display:none;
+}
+.error{
+  color:#dc2626;
+  margin-top:12px;
+}
+.order{
+  margin-top:15px;
+  padding-top:15px;
+  border-top:1px solid #ddd;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>PEKZZ ADMIN</h1>
+<p>Panel Pengelolaan Pesanan</p>
+</header>
+
+<div class="container">
+
+<div id="loginBox" class="card">
+
+<h2>Login Admin</h2>
+
+<input
+id="email"
+type="email"
+value="raufmaruf003@gmail.com"
+placeholder="Email Admin">
+
+<input
+id="password"
+type="password"
+placeholder="Password">
+
+<button type="button" id="loginButton">
+Login
+</button>
+
+<div id="message" class="error"></div>
+
+</div>
+
+<div id="adminBox" class="hidden">
+
+<div class="card">
+
+<b id="adminEmail"></b>
+
+<button type="button" onclick="loadOrders()">
+Refresh Pesanan
+</button>
+
+<button type="button" onclick="logout()">
+Keluar
+</button>
+
+</div>
+
+<div id="orders">
+Memuat pesanan...
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const SUPABASE_URL =
+"https://ptluxzkjvdhzsiejsmov.supabase.co";
+
+const SUPABASE_KEY =
+"sb_publishable_KH094rcfrlbQZ2wT9iKbBw_3H4edUdE";
+
+let accessToken =
+localStorage.getItem("pekzz_admin_token");
+
+async function login(){
+
+const email =
+document.getElementById("email")
+.value.trim();
+
+const password =
+document.getElementById("password")
+.value;
+
+const message =
+document.getElementById("message");
+
+if(!email || !password){
+
+message.textContent =
+"Email dan password wajib diisi.";
+
+return;
+}
+
+const button =
+document.getElementById("loginButton");
+
+button.disabled=true;
+button.textContent="Login...";
+
+try{
+
+const response =
+await fetch(
+SUPABASE_URL +
+"/auth/v1/token?grant_type=password",
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+"apikey":SUPABASE_KEY
+},
+body:JSON.stringify({
+email:email,
+password:password
+})
+}
+);
+
+const data =
+await response.json();
+
+if(!response.ok){
+
+throw new Error(
+data.error_description ||
+data.msg ||
+data.message ||
+"Login gagal."
+);
+
+}
+
+accessToken =
+data.access_token;
+
+localStorage.setItem(
+"pekzz_admin_token",
+accessToken
+);
+
+document.getElementById("loginBox")
+.classList.add("hidden");
+
+document.getElementById("adminBox")
+.classList.remove("hidden");
+
+document.getElementById("adminEmail")
+.textContent =
+"Login: " + email;
+
+loadOrders();
+
+}catch(error){
+
+message.textContent =
+"Login gagal: " +
+error.message;
+
+button.disabled=false;
+button.textContent="Login";
+
+}
+
+}
+
+document
+.getElementById("loginButton")
+.addEventListener(
+"click",
+login
+);
+
+async function loadOrders(){
+
+const box =
+document.getElementById("orders");
+
+box.innerHTML =
+"Memuat pesanan...";
+
+try{
+
+const response =
+await fetch(
+SUPABASE_URL +
+"/rest/v1/orders?select=*&order=id.desc",
+{
+headers:{
+"apikey":SUPABASE_KEY,
+"Authorization":
+"Bearer " + accessToken
+}
+}
+);
+
+const data =
+await response.json();
+
+if(!response.ok){
+
+throw new Error(
+data.message ||
+"Pesanan tidak dapat dimuat."
+);
+
+}
+
+if(!data.length){
+
+box.innerHTML =
+'<div class="card">Belum ada pesanan.</div>';
+
+return;
+}
+
+box.innerHTML="";
+
+data.forEach(order=>{
+
+const total =
+Number(order.price_per_item || 0) *
+Number(order.quantity || 1);
+
+const div =
+document.createElement("div");
+
+div.className="card";
+
+div.innerHTML=`
+
+<div class="order">
+
+<h2>Order #${order.id}</h2>
+
+<p>Nama: ${safe(order.customer_name)}</p>
+
+<p>Produk: ${safe(order.product_name)}</p>
+
+<p>Jumlah: ${order.quantity || 1}</p>
+
+<p>Harga:
+Rp${total.toLocaleString("id-ID")}
+</p>
+
+<p>Kontak:
+${safe(order.customer_email)}
+</p>
+
+<p>Metode pembayaran:
+${safe(order.payment_method)}
+</p>
+
+<p>Status pembayaran:
+<b>${paymentStatus(order.payment_status)}</b>
+</p>
+
+<p>Status pesanan:
+<b>${orderStatus(order.status)}</b>
+</p>
+
+<button type="button"
+onclick="acceptPayment(${order.id})">
+Pembayaran Diterima
+</button>
+
+<button type="button"
+onclick="rejectOrder(${order.id})">
+Tolak
+</button>
+
+<button type="button"
+onclick="completeOrder(${order.id})">
+Pesanan Selesai
+</button>
+
+</div>
+`;
+
+box.appendChild(div);
+
+});
+
+}catch(error){
+
+box.innerHTML =
+'<div class="card error">' +
+"Gagal memuat pesanan: " +
+safe(error.message) +
+"</div>";
+
+}
+
+}
+
+async function updateOrder(id,changes){
+
+try{
+
+const response =
+await fetch(
+SUPABASE_URL +
+"/rest/v1/orders?id=eq." +
+encodeURIComponent(id),
+{
+method:"PATCH",
+headers:{
+"Content-Type":"application/json",
+"apikey":SUPABASE_KEY,
+"Authorization":
+"Bearer " + accessToken,
+"Prefer":"return=minimal"
+},
+body:JSON.stringify(changes)
+}
+);
+
+if(!response.ok){
+
+const text =
+await response.text();
+
+throw new Error(text);
+
+}
+
+loadOrders();
+
+}catch(error){
+
+alert(
+"Gagal memperbarui pesanan:\n" +
+error.message
+);
+
+}
+
+}
+
+function acceptPayment(id){
+
+if(confirm(
+"Terima pembayaran Order #" +
+id + "?"
+)){
+
+updateOrder(id,{
+payment_status:"paid",
+status:"processing"
+});
+
+}
+
+}
+
+function rejectOrder(id){
+
+if(confirm(
+"Tolak Order #" + id + "?"
+)){
+
+updateOrder(id,{
+payment_status:"rejected",
+status:"cancelled"
+});
+
+}
+
+}
+
+function completeOrder(id){
+
+if(confirm(
+"Selesaikan Order #" + id + "?"
+)){
+
+updateOrder(id,{
+status:"completed"
+});
+
+}
+
+}
+
+function paymentStatus(status){
+
+if(status==="waiting_verification")
+return "Menunggu Verifikasi";
+
+if(status==="paid")
+return "Pembayaran Diterima";
+
+if(status==="rejected")
+return "Pembayaran Ditolak";
+
+return "Belum Dibayar";
+
+}
+
+function orderStatus(status){
+
+if(status==="pending")
+return "Menunggu Pembayaran";
+
+if(status==="processing")
+return "Sedang Diproses";
+
+if(status==="completed")
+return "Selesai";
+
+if(status==="cancelled")
+return "Dibatalkan";
+
+return status || "-";
+
+}
+
+function safe(value){
+
+return String(value || "-")
+.replace(/&/g,"&amp;")
+.replace(/</g,"&lt;")
+.replace(/>/g,"&gt;")
+.replace(/"/g,"&quot;")
+.replace(/'/g,"&#039;");
+
+}
+
+function logout(){
+
+localStorage.removeItem(
+"pekzz_admin_token"
+);
+
+location.reload();
+
+}
+
+if(accessToken){
+
+document.getElementById("loginBox")
+.classList.add("hidden");
+
+document.getElementById("adminBox")
+.classList.remove("hidden");
+
+loadOrders();
+
+}
+
+</script>
+
+</body>
+</html>
