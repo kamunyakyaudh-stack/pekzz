@@ -1,118 +1,28 @@
-<!DOCTYPE html>
-<html lang="id">
+<!DOCTYPE html><html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PEKZZ - Riwayat Pesanan</title>
-
-<style>
-body{
-  margin:0;
-  font-family:Arial,sans-serif;
-  background:#f3f4f6;
-  color:#111827;
-}
-
-header{
-  background:#111827;
-  color:white;
-  text-align:center;
-  padding:20px;
-}
-
-.container{
-  max-width:600px;
-  margin:auto;
-  padding:20px;
-}
-
-.card{
-  background:white;
-  padding:24px;
-  border-radius:16px;
-  box-shadow:0 3px 12px #0002;
-}
-
-input{
-  width:100%;
-  box-sizing:border-box;
-  padding:13px;
-  border:1px solid #d1d5db;
-  border-radius:9px;
-  margin:10px 0;
-}
-
-button{
-  width:100%;
-  padding:14px;
-  border:0;
-  border-radius:9px;
-  background:#2563eb;
-  color:white;
-  font-weight:bold;
-}
-
-.result{
-  margin-top:20px;
-}
-
-.row{
-  padding:12px 0;
-  border-bottom:1px solid #eee;
-}
-
-.label{
-  font-size:13px;
-  color:#6b7280;
-}
-
-.value{
-  font-weight:bold;
-  margin-top:4px;
-}
-
-.error{
-  color:#dc2626;
-  font-weight:bold;
-  margin-top:15px;
-}
-</style>
-</head>
-
-<body>
-
-<header>
+<title>PEKZZ - Cek Pesanan</title><style>
+body{margin:0;font-family:Arial,sans-serif;background:#f3f4f6;color:#111827}
+header{background:#111827;color:white;text-align:center;padding:20px}
+.container{max-width:600px;margin:auto;padding:20px}
+.card{background:white;padding:24px;border-radius:16px;box-shadow:0 3px 12px #0002}
+input{width:100%;box-sizing:border-box;padding:13px;border:1px solid #d1d5db;border-radius:9px;margin:10px 0}
+button{width:100%;padding:14px;border:0;border-radius:9px;background:#2563eb;color:white;font-weight:bold;cursor:pointer}
+.result{margin-top:20px}
+.row{padding:12px 0;border-bottom:1px solid #eee}
+.label{font-size:13px;color:#6b7280}
+.value{font-weight:bold;margin-top:4px}
+.error{color:#dc2626;font-weight:bold;margin-top:15px}
+</style></head><body><header>
 <h1>PEKZZ</h1>
-<p>Riwayat Pesanan</p>
-</header>
+<p>Cek Pesanan</p>
+</header><div class="container">
+<div class="card"><h2>Cek Pesanan</h2>
+<p>Masukkan nomor order kamu.</p><input id="orderId" type="number" placeholder="Contoh: 3"><button onclick="cekPesanan()">Cek Pesanan</button>
 
-<div class="container">
-
-<div class="card">
-
-<h2>Cek Pesanan</h2>
-
-<p>
-Masukkan nomor order kamu.
-</p>
-
-<input
-id="orderId"
-type="number"
-placeholder="Contoh: 3"
->
-
-<button onclick="cekPesanan()">
-Cek Pesanan
-</button>
-
-<div id="result" class="result"></div>
-
-</div>
-
-</div>
-
-<script>
+<div id="result" class="result"></div></div>
+</div><script>
 
 const SUPABASE_URL =
 "https://ptluxzkjvdhzsiejsmov.supabase.co";
@@ -123,96 +33,73 @@ const SUPABASE_KEY =
 async function cekPesanan(){
 
 const id =
-document.getElementById("orderId")
-.value.trim();
+document.getElementById("orderId").value.trim();
 
 const result =
 document.getElementById("result");
 
 if(!id){
-
 result.innerHTML =
 '<div class="error">Masukkan nomor order.</div>';
-
 return;
 }
 
-result.innerHTML =
-"Memuat pesanan...";
+result.innerHTML = "Memuat pesanan...";
 
 try{
 
 const response = await fetch(
-
-SUPABASE_URL +
-"/rest/v1/orders?id=eq." +
-encodeURIComponent(id) +
-"&select=id,customer_name,product_name,quantity,price_per_item,payment_method,payment_status,status,created_at",
-
+SUPABASE_URL + "/rest/v1/rpc/get_order_for_tracking",
 {
+method:"POST",
 headers:{
 "apikey":SUPABASE_KEY,
-"Authorization":
-"Bearer " + SUPABASE_KEY
+"Authorization":"Bearer " + SUPABASE_KEY,
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+p_order_id:Number(id)
+})
 }
-}
-
 );
 
 if(!response.ok){
-
-throw new Error(
-await response.text()
-);
-
+throw new Error(await response.text());
 }
 
-const data =
-await response.json();
+const order = await response.json();
 
-if(!data.length){
-
+if(!order || !order.id){
 result.innerHTML =
 '<div class="error">Pesanan tidak ditemukan.</div>';
-
 return;
 }
-
-const order =
-data[0];
 
 const total =
 Number(order.price_per_item || 0) *
 Number(order.quantity || 1);
 
-let pembayaran =
-order.payment_status;
+let pembayaran = order.payment_status;
 
-if(pembayaran === "paid"){
+if(pembayaran === "paid")
 pembayaran = "Pembayaran Diterima";
-}
-else if(pembayaran === "waiting_verification"){
+else if(pembayaran === "waiting_verification")
 pembayaran = "Menunggu Verifikasi";
-}
-else if(pembayaran === "rejected"){
+else if(pembayaran === "rejected")
 pembayaran = "Pembayaran Ditolak";
-}
-else{
+else
 pembayaran = "Belum Dibayar";
-}
 
-let status =
-order.status;
+let status = order.status;
 
-if(status === "pending"){
+if(status === "pending")
 status = "Menunggu Pembayaran";
-}
-else if(status === "processing"){
+else if(status === "processing")
 status = "Sedang Diproses";
-}
-else if(status === "completed"){
+else if(status === "completed")
 status = "Selesai";
-}
+else if(status === "cancelled")
+status = "Dibatalkan";
 
 result.innerHTML = `
 
@@ -293,7 +180,5 @@ return String(value)
 
 }
 
-</script>
-
-</body>
+</script></body>
 </html>
