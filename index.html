@@ -1,11 +1,8 @@
-<!DOCTYPE html>
-<html lang="id">
+<!DOCTYPE html><html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PEKZZ - Top Up Game</title>
-
-<style>
+<title>PEKZZ - Top Up Game</title><style>
 body{
   margin:0;
   font-family:Arial,sans-serif;
@@ -87,6 +84,7 @@ button{
   color:white;
   font-weight:bold;
   margin-top:10px;
+  cursor:pointer;
 }
 
 input,select{
@@ -108,87 +106,62 @@ input,select{
   border-radius:8px;
   background:#f3f4f6;
 }
-</style>
-</head>
-
-<body>
-
-<header>
+</style></head><body><header>
   <div class="logo">PEKZZ</div>
   TOP UP GAME
-</header>
-
-<div class="nav">
+</header><div class="nav">
   <a href="index.html">🛒 Belanja</a>
   <a href="riwayat.html">🔎 Cek Pesanan</a>
-</div>
-
-<div class="container">
-
-  <div class="hero">
+</div><div class="container">  <div class="hero">
     <h1>Top Up Cepat & Mudah</h1>
     <p>Pesan produk game dengan mudah.</p>
-  </div>
-
-  <h2>Produk</h2>
-
-  <div class="products">
-
-    <div class="card">
-      <h3>⚔️ ML 86 Diamonds</h3>
-      <p class="price">Rp20.000</p>
-      <button onclick="pilih('ML 86 Diamonds',20000)">
-        Pilih
-      </button>
-    </div>
-
-    <div class="card">
-      <h3>🔥 FF 70 Diamonds</h3>
-      <p class="price">Rp10.000</p>
-      <button onclick="pilih('FF 70 Diamonds',10000)">
-        Pilih
-      </button>
-    </div>
-
-    <div class="card">
-      <h3>🎯 PUBG 60 UC</h3>
-      <p class="price">Rp15.000</p>
-      <button onclick="pilih('PUBG 60 UC',15000)">
-        Pilih
-      </button>
-    </div>
-
-  </div>
-
-  <div id="checkout" class="checkout hidden">
-
-    <h2>Checkout</h2>
-
-    <p id="produk"></p>
-
-    <input id="nama" placeholder="Nama">
-
-    <input id="kontak" placeholder="WhatsApp / Email">
-
-    <input id="tujuan" placeholder="ID Game / Nomor Tujuan">
-
-    <select id="payment">
-      <option>DANA</option>
-      <option>QRIS</option>
-      <option>Transfer Bank</option>
-    </select>
-
-    <button onclick="buatPesanan()">
-      Buat Pesanan
-    </button>
-
-    <div id="message"></div>
-
-  </div>
-
+  </div>  <h2>Produk</h2>  <div class="products"><div class="card">
+  <h3>⚔️ ML 86 Diamonds</h3>
+  <p class="price">Rp20.000</p>
+  <button onclick="pilih('ML 86 Diamonds',20000)">
+    Pilih
+  </button>
 </div>
 
-<script>
+<div class="card">
+  <h3>🔥 FF 70 Diamonds</h3>
+  <p class="price">Rp10.000</p>
+  <button onclick="pilih('FF 70 Diamonds',10000)">
+    Pilih
+  </button>
+</div>
+
+<div class="card">
+  <h3>🎯 PUBG 60 UC</h3>
+  <p class="price">Rp15.000</p>
+  <button onclick="pilih('PUBG 60 UC',15000)">
+    Pilih
+  </button>
+</div>
+
+  </div>  <div id="checkout" class="checkout hidden"><h2>Checkout</h2>
+
+<p id="produk"></p>
+
+<input id="nama" placeholder="Nama">
+
+<input id="kontak" placeholder="WhatsApp / Email">
+
+<input id="tujuan" placeholder="ID Game / Nomor Tujuan">
+
+<select id="payment">
+  <option>DANA</option>
+  <option>QRIS</option>
+  <option>Transfer Bank</option>
+</select>
+
+<button id="orderButton" onclick="buatPesanan()">
+  Buat Pesanan
+</button>
+
+<div id="message"></div>
+
+  </div></div><script>
 
 const SUPABASE_URL =
 "https://ptluxzkjvdhzsiejsmov.supabase.co";
@@ -209,7 +182,7 @@ function pilih(nama,hargaProduk){
     .classList.remove("hidden");
 
   document.getElementById("produk").innerHTML =
-    "Produk: <b>" + produk + "</b><br>" +
+    "Produk: <b>" + escapeHtml(produk) + "</b><br>" +
     "Harga: <b>Rp" +
     harga.toLocaleString("id-ID") +
     "</b>";
@@ -242,6 +215,17 @@ async function buatPesanan(){
   const message =
     document.getElementById("message");
 
+  const button =
+    document.getElementById("orderButton");
+
+  if(!produk || !harga){
+
+    message.innerHTML =
+      '<div class="message">Pilih produk terlebih dahulu.</div>';
+
+    return;
+  }
+
   if(!nama || !kontak || !tujuan){
 
     message.innerHTML =
@@ -249,6 +233,9 @@ async function buatPesanan(){
 
     return;
   }
+
+  button.disabled = true;
+  button.textContent = "Membuat Pesanan...";
 
   message.innerHTML =
     '<div class="message">Menyimpan pesanan...</div>';
@@ -272,24 +259,14 @@ async function buatPesanan(){
         body:JSON.stringify({
 
           customer_name:nama,
-
           product_name:produk,
-
           quantity:1,
-
-          status:"pending",
-
-          payment_status:"unpaid",
-
+          price_per_item:harga,
           payment_method:payment,
-
-          notes:
-            "Pesanan dari website Pekzz. " +
-            "Tujuan: " + tujuan,
-
+          payment_status:"unpaid",
+          status:"pending",
           customer_email:kontak,
-
-          price_per_item:harga
+          notes:"Tujuan: " + tujuan
 
         })
       }
@@ -297,37 +274,34 @@ async function buatPesanan(){
 
     if(!response.ok){
 
-      const error =
-        await response.text();
+      throw new Error(
+        await response.text()
+      );
 
-      message.innerHTML =
-        '<div class="message">' +
-        'Pesanan gagal disimpan:<br>' +
-        error +
-        '</div>';
-
-      return;
     }
 
     const data =
       await response.json();
 
     if(
-      !data ||
+      !Array.isArray(data) ||
       !data[0] ||
       !data[0].id
     ){
 
-      message.innerHTML =
-        '<div class="message">' +
-        'Pesanan tersimpan, tetapi nomor order tidak ditemukan.' +
-        '</div>';
+      throw new Error(
+        "Order berhasil dibuat tetapi ID order tidak diterima."
+      );
 
-      return;
     }
 
     const orderId =
       data[0].id;
+
+    /*
+      Nomor order dikirim langsung
+      ke halaman Checkout.
+    */
 
     window.location.href =
       "checkout.html?order=" +
@@ -339,17 +313,29 @@ async function buatPesanan(){
 
     console.error(error);
 
+    button.disabled = false;
+    button.textContent = "Buat Pesanan";
+
     message.innerHTML =
       '<div class="message">' +
-      'Pesanan gagal disimpan:<br>' +
-      error.message +
+      'Pesanan gagal dibuat:<br>' +
+      escapeHtml(error.message) +
       '</div>';
 
   }
 
 }
 
-</script>
+function escapeHtml(value){
 
-</body>
+  return String(value)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+
+}
+
+</script></body>
 </html>
